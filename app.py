@@ -460,11 +460,9 @@ def get_roles_table_data() -> list[list]:
         rows.append([
             label,
             role.get("description", ""),
-            role.get("action", "review"),
-            "✅ 启用" if role.get("enabled", True) else "❌ 禁用",
             role.get("created_at", ""),
         ])
-    return rows if rows else [["(暂无配置)", "", "", "", ""]]
+    return rows if rows else [["(暂无配置)", "", ""]]
 
 
 def refresh_roles():
@@ -473,7 +471,7 @@ def refresh_roles():
     return data
 
 
-def save_role(label: str, description: str, prompt_template: str, action: str, enabled: bool) -> str:
+def save_role(label: str, description: str, prompt_template: str) -> str:
     """新增或更新角色配置"""
     label = label.strip()
     if not label:
@@ -484,20 +482,21 @@ def save_role(label: str, description: str, prompt_template: str, action: str, e
     config = load_roles_config()
     roles = config.get("roles", {})
     is_new = label not in roles
+    existing = roles.get(label, {})
 
     roles[label] = {
         "label": label,
         "description": description.strip(),
         "prompt_template": prompt_template.strip(),
-        "action": action,
-        "enabled": enabled,
-        "created_at": roles.get(label, {}).get("created_at", datetime.now(timezone.utc).isoformat()),
+        "action": existing.get("action", "review"),
+        "enabled": existing.get("enabled", True),
+        "created_at": existing.get("created_at", datetime.now(timezone.utc).isoformat()),
     }
     config["roles"] = roles
     save_roles_config(config)
 
     action_word = "新增" if is_new else "更新"
-    logger.info("角色配置已%s: label=%s, action=%s", action_word, label, action)
+    logger.info("角色配置已%s: label=%s", action_word, label)
     return f"✅ 角色 `{label}` 已{action_word}保存"
 
 
@@ -525,13 +524,11 @@ def load_role_for_edit(label: str) -> tuple:
     config = load_roles_config()
     role = config.get("roles", {}).get(label)
     if not role:
-        return "", "", "", "review", True
+        return "", "", ""
     return (
         role.get("label", ""),
         role.get("description", ""),
         role.get("prompt_template", ""),
-        role.get("action", "review"),
-        role.get("enabled", True),
     )
 
 
@@ -580,7 +577,7 @@ def build_gradio_ui() -> gr.Blocks:
                 gr.Markdown("### 当前已配置的 Label → Role 映射")
 
                 roles_table = gr.Dataframe(
-                    headers=["Label", "描述", "动作类型", "状态", "创建时间"],
+                    headers=["Label", "描述", "创建时间"],
                     value=get_roles_table_data(),
                     interactive=False,
                     wrap=True,
@@ -601,13 +598,6 @@ def build_gradio_ui() -> gr.Blocks:
                             placeholder="简述该 Label 触发后执行的操作",
                         )
 
-                edit_action = gr.Radio(
-                    choices=["review", "edit"],
-                    value="review",
-                    label="动作类型",
-                    info="review: 代码审查并回复评论 | edit: 自动修改代码并提交",
-                )
-                edit_enabled = gr.Checkbox(label="启用此角色", value=True)
                 edit_prompt = gr.Textbox(
                     label="Prompt 模板",
                     placeholder="支持变量: {repo_url}, {pr_title}, {pr_body}, {base_branch}, {pr_author}, {pr_diff}, {pr_number}",
@@ -629,11 +619,11 @@ def build_gradio_ui() -> gr.Blocks:
                 load_btn.click(
                     fn=load_role_for_edit,
                     inputs=[edit_label],
-                    outputs=[edit_label, edit_desc, edit_prompt, edit_action, edit_enabled],
+                    outputs=[edit_label, edit_desc, edit_prompt],
                 )
                 save_btn.click(
                     fn=save_role,
-                    inputs=[edit_label, edit_desc, edit_prompt, edit_action, edit_enabled],
+                    inputs=[edit_label, edit_desc, edit_prompt],
                     outputs=[save_result],
                 ).then(fn=refresh_roles, outputs=roles_table)
 
