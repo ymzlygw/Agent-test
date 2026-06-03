@@ -1,0 +1,44 @@
+# 环境变量（包含敏感密钥，绝不提交）
+.env
+
+# 运行时生成的日志和配置（含用户自定义数据，不纳入版本控制）
+app.log
+roles_config.json
+
+# 持久化数据目录
+data/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# 虚拟环境
+.venv/
+venv/
+env/
+ENV/
+
+# 分发与打包
+dist/
+build/
+*.egg-info/
+*.egg
+
+# IDE 配置
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# 测试缓存
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Jupyter
+.ipynb_checkpoints/
